@@ -1,0 +1,689 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>智慧教室公告儀表板</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Font Awesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <!-- Google Fonts: Noto Sans TC -->
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@500;700;900&display=swap" rel="stylesheet">
+  <style>
+    /* 基準字級與對比設定 */
+    body {
+      font-family: 'Noto Sans TC', sans-serif;
+      font-size: 20px; /* 預設文字 20px，便利學生看清 */
+      background-color: #f1f5f9;
+      color: #0f172a;
+    }
+
+    /* 自訂便利貼陰影與樣式 */
+    .sticky-note {
+      transition: all 0.2s ease-in-out;
+      box-shadow: 4px 4px 0px rgba(0, 0, 0, 0.8);
+    }
+    .sticky-note:hover {
+      transform: translateY(-4px) rotate(-0.5deg);
+      box-shadow: 6px 8px 0px rgba(0, 0, 0, 0.85);
+    }
+
+    /* 精美滾動條 */
+    ::-webkit-scrollbar {
+      width: 10px;
+      height: 10px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #e2e8f0;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #0284c7;
+      border-radius: 5px;
+    }
+
+    /* 閃爍提醒效果 */
+    @keyframes timeAlert {
+      0%, 100% { background-color: #ef4444; color: #ffffff; }
+      50% { background-color: #fef08a; color: #000000; }
+    }
+    .timer-alert {
+      animation: timeAlert 0.8s infinite;
+    }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col bg-slate-100 text-slate-900 font-bold selection:bg-yellow-300">
+
+  <!-- 頂部標題與時間儀表板 HEADER -->
+  <header class="bg-blue-600 text-white p-4 sm:p-5 shadow-lg border-b-4 border-black sticky top-0 z-30">
+    <div class="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
+      
+      <!-- 標題與班級資訊 -->
+      <div class="flex items-center gap-3">
+        <div class="bg-yellow-400 text-black p-3 rounded-xl border-2 border-black text-2xl shadow">
+          <i class="fa-solid fa-chalkboard-user"></i>
+        </div>
+        <div>
+          <h1 class="text-2xl sm:text-3xl font-black tracking-wide drop-shadow-sm">上課公告儀表板</h1>
+          <p class="text-blue-100 text-sm font-semibold">智慧教室輔助系統 • 醒目大字版</p>
+        </div>
+      </div>
+
+      <!-- 即時日期與 24 小時制時鐘 (醒目對比) -->
+      <div class="flex flex-wrap items-center justify-center gap-3 bg-blue-900 text-yellow-300 px-6 py-3 rounded-2xl border-2 border-yellow-400 shadow-inner">
+        <div class="text-center border-r-2 border-blue-700 pr-4">
+          <div id="current-date" class="text-lg text-white font-bold">2026年09月30日</div>
+          <div id="current-day" class="text-yellow-400 text-base font-extrabold">星期三</div>
+        </div>
+        <div class="text-center pl-2">
+          <span class="text-xs text-blue-200 block tracking-wider uppercase">現在時間 (24H)</span>
+          <span id="current-time" class="text-3xl sm:text-4xl font-black tracking-widest font-mono text-white">19:18:00</span>
+        </div>
+      </div>
+
+      <!-- 快捷功能按鈕 -->
+      <div class="flex items-center gap-2">
+        <button id="fullscreen-btn" onclick="toggleFullScreen()" class="bg-yellow-400 hover:bg-yellow-300 text-black px-4 py-2 rounded-xl border-2 border-black font-bold text-base shadow hover:shadow-md transition flex items-center gap-2">
+          <i class="fa-solid fa-expand"></i> <span class="hidden sm:inline">全螢幕</span>
+        </button>
+      </div>
+
+    </div>
+  </header>
+
+  <!-- 主要內容區 -->
+  <main class="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 grid grid-cols-1 lg:grid-cols-12 gap-6">
+
+    <!-- 頂部跑馬燈公告（可編輯緊急公告） -->
+    <div class="lg:col-span-12 bg-rose-500 text-white p-3 rounded-2xl border-3 border-black shadow flex items-center gap-3">
+      <span class="bg-black text-yellow-300 text-base px-3 py-1 rounded-lg font-black shrink-0 border border-yellow-300">
+        <i class="fa-solid fa-bullhorn animate-bounce mr-1"></i> 即時提醒
+      </span>
+      <input id="banner-text" type="text" value="歡迎上課！請同學們迅速就座，並將課本與作業準備好。" 
+             class="bg-transparent border-b-2 border-dashed border-white text-white placeholder-rose-200 w-full font-bold text-xl focus:outline-none focus:border-yellow-300 px-2"
+             placeholder="按此處可直接修改橫幅公告內文..." />
+    </div>
+
+    <!-- 左側面板：倒數計時器 & 課堂工具箱 (4 欄位寬度) -->
+    <section class="lg:col-span-4 flex flex-col gap-6">
+      
+      <!-- 倒數計時器卡片 -->
+      <div class="bg-white p-6 rounded-3xl border-4 border-black shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] flex flex-col items-center">
+        
+        <div class="w-full flex justify-between items-center mb-4 border-b-2 border-slate-200 pb-2">
+          <h2 class="text-2xl font-black text-slate-800 flex items-center gap-2">
+            <i class="fa-solid fa-stopwatch text-rose-500"></i> 課堂倒數計時器
+          </h2>
+          <button id="sound-toggle" onclick="toggleSound()" class="text-slate-600 hover:text-black text-xl" title="切換提醒音效">
+            <i class="fa-solid fa-volume-high text-emerald-600"></i>
+          </button>
+        </div>
+
+        <!-- 計時器大字體數字顯示區 -->
+        <div id="timer-display-box" class="w-full bg-slate-900 text-emerald-400 p-6 rounded-2xl border-4 border-slate-700 text-center shadow-inner my-2">
+          <div id="timer-display" class="text-6xl sm:text-7xl font-mono font-black tracking-widest">10:00</div>
+          <div id="timer-status" class="text-slate-400 text-base mt-2 font-bold">準備就緒</div>
+        </div>
+
+        <!-- 快速加時/選擇按鈕 -->
+        <div class="w-full grid grid-cols-5 gap-1.5 my-4">
+          <button onclick="setTimerMinutes(1)" class="bg-sky-100 hover:bg-sky-300 text-sky-900 border-2 border-black py-2 rounded-xl text-base font-extrabold shadow-sm active:translate-y-0.5">1分</button>
+          <button onclick="setTimerMinutes(3)" class="bg-sky-100 hover:bg-sky-300 text-sky-900 border-2 border-black py-2 rounded-xl text-base font-extrabold shadow-sm active:translate-y-0.5">3分</button>
+          <button onclick="setTimerMinutes(5)" class="bg-sky-100 hover:bg-sky-300 text-sky-900 border-2 border-black py-2 rounded-xl text-base font-extrabold shadow-sm active:translate-y-0.5">5分</button>
+          <button onclick="setTimerMinutes(10)" class="bg-sky-100 hover:bg-sky-300 text-sky-900 border-2 border-black py-2 rounded-xl text-base font-extrabold shadow-sm active:translate-y-0.5">10分</button>
+          <button onclick="setTimerMinutes(15)" class="bg-sky-100 hover:bg-sky-300 text-sky-900 border-2 border-black py-2 rounded-xl text-base font-extrabold shadow-sm active:translate-y-0.5">15分</button>
+        </div>
+
+        <!-- 自訂時間輸入 (分:秒) -->
+        <div class="w-full flex items-center gap-2 mb-4">
+          <label class="text-base font-bold whitespace-nowrap">自訂時間:</label>
+          <input type="number" id="custom-min" min="0" max="180" value="10" placeholder="分" class="w-1/2 p-2 border-2 border-black rounded-xl text-center text-lg font-bold bg-slate-50 focus:bg-yellow-50 focus:outline-none">
+          <span class="font-black">分</span>
+          <input type="number" id="custom-sec" min="0" max="59" value="00" placeholder="秒" class="w-1/2 p-2 border-2 border-black rounded-xl text-center text-lg font-bold bg-slate-50 focus:bg-yellow-50 focus:outline-none">
+          <span class="font-black">秒</span>
+          <button onclick="applyCustomTime()" class="bg-slate-800 hover:bg-black text-white px-3 py-2 rounded-xl border-2 border-black font-bold text-base shrink-0">設定</button>
+        </div>
+
+        <!-- 操作控制按鈕 (開始/暫停/重置) -->
+        <div class="w-full grid grid-cols-2 gap-3">
+          <button id="start-pause-btn" onclick="toggleTimer()" class="bg-emerald-500 hover:bg-emerald-400 text-black border-3 border-black py-3 rounded-2xl font-black text-xl shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] active:translate-y-1 active:shadow-none flex items-center justify-center gap-2">
+            <i class="fa-solid fa-play"></i> 開始計時
+          </button>
+          <button onclick="resetTimer()" class="bg-rose-400 hover:bg-rose-300 text-black border-3 border-black py-3 rounded-2xl font-black text-xl shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] active:translate-y-1 active:shadow-none flex items-center justify-center gap-2">
+            <i class="fa-solid fa-rotate-right"></i> 重設
+          </button>
+        </div>
+
+      </div>
+
+      <!-- 課堂隨機抽籤小工具 (加分實用功能) -->
+      <div class="bg-amber-100 p-5 rounded-3xl border-4 border-black shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] flex flex-col gap-3">
+        <h3 class="text-xl font-black text-amber-900 flex items-center gap-2">
+          <i class="fa-solid fa-dice text-amber-700"></i> 課堂幸運抽號器
+        </h3>
+        <div class="flex items-center gap-2">
+          <span class="text-base font-bold">座號範圍: 1 ~</span>
+          <input type="number" id="max-student-num" value="35" min="1" max="100" class="w-20 p-2 border-2 border-black rounded-xl text-center font-bold bg-white">
+          <button onclick="drawRandomStudent()" class="bg-amber-400 hover:bg-amber-300 text-black px-4 py-2 rounded-xl border-2 border-black font-extrabold text-base shadow active:translate-y-0.5">
+            抽號碼
+          </button>
+        </div>
+        <div id="random-result" class="bg-white p-3 rounded-xl border-2 border-black text-center text-2xl font-black text-rose-600 min-h-[50px] flex items-center justify-center shadow-inner">
+          準備抽號...
+        </div>
+      </div>
+
+    </section>
+
+    <!-- 右側面板：數位公告白板 / 文字便利貼 (8 欄位寬度) -->
+    <section class="lg:col-span-8 flex flex-col gap-4">
+      
+      <!-- 白板標題與控制列 -->
+      <div class="bg-white p-4 rounded-2xl border-4 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] flex flex-wrap justify-between items-center gap-3">
+        <div>
+          <h2 class="text-2xl font-black text-slate-800 flex items-center gap-2">
+            <i class="fa-solid fa-note-sticky text-yellow-500"></i> 數位公告便利貼白板
+          </h2>
+          <p class="text-slate-500 text-sm font-bold">可在下方新增公告、重要提醒、作業與事項</p>
+        </div>
+
+        <div class="flex items-center gap-2 flex-wrap">
+          <!-- 新增便利貼按鈕 -->
+          <button onclick="openNoteModal()" class="bg-yellow-400 hover:bg-yellow-300 text-black px-4 py-2.5 rounded-xl border-2 border-black font-black text-base shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] active:translate-y-0.5 active:shadow-none flex items-center gap-2">
+            <i class="fa-solid fa-plus text-lg"></i> 新增公告便利貼
+          </button>
+          
+          <button onclick="clearAllNotes()" class="bg-slate-200 hover:bg-rose-200 text-slate-800 hover:text-rose-900 px-3 py-2.5 rounded-xl border-2 border-black font-bold text-sm transition">
+            <i class="fa-solid fa-trash-can"></i> 清空白板
+          </button>
+        </div>
+      </div>
+
+      <!-- 便利貼展示牆牆面 (Grid 佈局) -->
+      <div id="notes-container" class="grid grid-cols-1 md:grid-cols-2 gap-5 min-h-[480px] p-2">
+        <!-- 便利貼動態插入處 -->
+      </div>
+
+    </section>
+
+  </main>
+
+  <!-- 新增/編輯便利貼 Modal 對話框 -->
+  <div id="note-modal" class="fixed inset-0 bg-black/60 backdrop-blur-sm hidden items-center justify-center p-4 z-50">
+    <div class="bg-white w-full max-w-lg rounded-3xl border-4 border-black shadow-[10px_10px_0px_0px_rgba(0,0,0,1)] p-6 flex flex-col gap-4 animate-in fade-in zoom-in duration-150">
+      
+      <div class="flex justify-between items-center border-b-2 border-slate-200 pb-3">
+        <h3 id="modal-title" class="text-2xl font-black flex items-center gap-2">
+          <i class="fa-solid fa-pen-to-square text-blue-600"></i> 新增公告便利貼
+        </h3>
+        <button onclick="closeNoteModal()" class="text-slate-400 hover:text-black text-2xl font-bold">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <!-- 輸入欄位 -->
+      <div class="flex flex-col gap-3">
+        <div>
+          <label class="block text-base font-extrabold mb-1">標題 / 分類:</label>
+          <input type="text" id="note-title-input" placeholder="例如：今日作業 / 課堂提醒 / 小組任務" class="w-full p-3 border-2 border-black rounded-xl text-lg font-bold bg-slate-50 focus:bg-yellow-50 focus:outline-none">
+        </div>
+
+        <div>
+          <label class="block text-base font-extrabold mb-1">公告內容 (大字清晰):</label>
+          <textarea id="note-content-input" rows="4" placeholder="請輸入詳細公告內容..." class="w-full p-3 border-2 border-black rounded-xl text-lg font-bold bg-slate-50 focus:bg-yellow-50 focus:outline-none"></textarea>
+        </div>
+
+        <div>
+          <label class="block text-base font-extrabold mb-2">便利貼顏色:</label>
+          <div class="flex gap-3">
+            <label class="cursor-pointer">
+              <input type="radio" name="note-color" value="yellow" checked class="peer sr-only">
+              <div class="w-10 h-10 rounded-full bg-yellow-200 border-2 border-black peer-checked:ring-4 peer-checked:ring-yellow-500 peer-checked:scale-110 transition"></div>
+            </label>
+            <label class="cursor-pointer">
+              <input type="radio" name="note-color" value="sky" class="peer sr-only">
+              <div class="w-10 h-10 rounded-full bg-sky-200 border-2 border-black peer-checked:ring-4 peer-checked:ring-sky-500 peer-checked:scale-110 transition"></div>
+            </label>
+            <label class="cursor-pointer">
+              <input type="radio" name="note-color" value="emerald" class="peer sr-only">
+              <div class="w-10 h-10 rounded-full bg-emerald-200 border-2 border-black peer-checked:ring-4 peer-checked:ring-emerald-500 peer-checked:scale-110 transition"></div>
+            </label>
+            <label class="cursor-pointer">
+              <input type="radio" name="note-color" value="pink" class="peer sr-only">
+              <div class="w-10 h-10 rounded-full bg-pink-200 border-2 border-black peer-checked:ring-4 peer-checked:ring-pink-500 peer-checked:scale-110 transition"></div>
+            </label>
+            <label class="cursor-pointer">
+              <input type="radio" name="note-color" value="purple" class="peer sr-only">
+              <div class="w-10 h-10 rounded-full bg-purple-200 border-2 border-black peer-checked:ring-4 peer-checked:ring-purple-500 peer-checked:scale-110 transition"></div>
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <!-- 送出按鈕 -->
+      <div class="flex gap-3 mt-2">
+        <button onclick="saveNote()" class="flex-1 bg-yellow-400 hover:bg-yellow-300 text-black border-2 border-black py-3 rounded-xl font-black text-lg shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] active:translate-y-0.5">
+          儲存並發布
+        </button>
+        <button onclick="closeNoteModal()" class="bg-slate-200 hover:bg-slate-300 text-slate-800 border-2 border-black px-5 py-3 rounded-xl font-bold text-lg">
+          取消
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- 底部 Footer -->
+  <footer class="bg-slate-800 text-slate-300 text-center p-3 text-sm font-semibold border-t-2 border-black mt-auto">
+    智慧課堂教學儀表板 • 高對比大字體專用系統
+  </footer>
+
+  <script>
+    /* ===================================================
+     * 1. 24小時制 時鐘與日期模組
+     * =================================================== */
+    function updateClock() {
+      const now = new Date();
+      
+      // 年月日格式化
+      const year = now.getFullYear();
+      const month = String(now.getMonth() + 1).padStart(2, '0');
+      const date = String(now.getDate()).padStart(2, '0');
+      document.getElementById('current-date').innerText = `${year}年${month}月${date}日`;
+
+      // 星期格式化
+      const days = ['星期日', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六'];
+      document.getElementById('current-day').innerText = days[now.getDay()];
+
+      // 24小時制時間 (HH:mm:ss)
+      const hours = String(now.getHours()).padStart(2, '0');
+      const minutes = String(now.getMinutes()).padStart(2, '0');
+      const seconds = String(now.getSeconds()).padStart(2, '0');
+      document.getElementById('current-time').innerText = `${hours}:${minutes}:${seconds}`;
+    }
+
+    // 每秒更新一次時間
+    setInterval(updateClock, 1000);
+    updateClock(); // 立即執行一次
+
+    /* ===================================================
+     * 2. 課堂倒數計時器模組 & 音效合成器
+     * =================================================== */
+    let timerInterval = null;
+    let totalSeconds = 10 * 60; // 預設 10 分鐘
+    let remainingSeconds = totalSeconds;
+    let isTimerRunning = false;
+    let isSoundEnabled = true;
+
+    const timerDisplay = document.getElementById('timer-display');
+    const timerStatus = document.getElementById('timer-status');
+    const startPauseBtn = document.getElementById('start-pause-btn');
+    const timerDisplayBox = document.getElementById('timer-display-box');
+
+    function renderTimer() {
+      const mins = Math.floor(remainingSeconds / 60);
+      const secs = remainingSeconds % 60;
+      timerDisplay.innerText = `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+    }
+
+    function setTimerMinutes(mins) {
+      pauseTimer();
+      totalSeconds = mins * 60;
+      remainingSeconds = totalSeconds;
+      timerStatus.innerText = `設定為 ${mins} 分鐘`;
+      timerDisplayBox.classList.remove('timer-alert');
+      renderTimer();
+    }
+
+    function applyCustomTime() {
+      const mins = parseInt(document.getElementById('custom-min').value) || 0;
+      const secs = parseInt(document.getElementById('custom-sec').value) || 0;
+      
+      if (mins === 0 && secs === 0) return;
+
+      pauseTimer();
+      totalSeconds = (mins * 60) + secs;
+      remainingSeconds = totalSeconds;
+      timerStatus.innerText = `自訂為 ${mins}分 ${secs}秒`;
+      timerDisplayBox.classList.remove('timer-alert');
+      renderTimer();
+    }
+
+    function toggleTimer() {
+      if (isTimerRunning) {
+        pauseTimer();
+      } else {
+        startTimer();
+      }
+    }
+
+    function startTimer() {
+      if (remainingSeconds <= 0) return;
+
+      isTimerRunning = true;
+      timerStatus.innerText = '倒數計時中...';
+      startPauseBtn.innerHTML = '<i class="fa-solid fa-pause"></i> 暫停計時';
+      startPauseBtn.className = startPauseBtn.className.replace('bg-emerald-500 hover:bg-emerald-400', 'bg-amber-400 hover:bg-amber-300');
+
+      timerInterval = setInterval(() => {
+        remainingSeconds--;
+        renderTimer();
+
+        if (remainingSeconds <= 0) {
+          clearInterval(timerInterval);
+          isTimerRunning = false;
+          timerStatus.innerText = '⏰ 時間到！';
+          timerDisplayBox.classList.add('timer-alert');
+          startPauseBtn.innerHTML = '<i class="fa-solid fa-play"></i> 開始計時';
+          startPauseBtn.className = startPauseBtn.className.replace('bg-amber-400 hover:bg-amber-300', 'bg-emerald-500 hover:bg-emerald-400');
+          playAlarmSound();
+        }
+      }, 1000);
+    }
+
+    function pauseTimer() {
+      clearInterval(timerInterval);
+      isTimerRunning = false;
+      timerStatus.innerText = '已暫停';
+      startPauseBtn.innerHTML = '<i class="fa-solid fa-play"></i> 繼續計時';
+      startPauseBtn.className = startPauseBtn.className.replace('bg-amber-400 hover:bg-amber-300', 'bg-emerald-500 hover:bg-emerald-400');
+    }
+
+    function resetTimer() {
+      pauseTimer();
+      remainingSeconds = totalSeconds;
+      timerStatus.innerText = '已重置';
+      timerDisplayBox.classList.remove('timer-alert');
+      renderTimer();
+    }
+
+    // 切換音效開關
+    function toggleSound() {
+      isSoundEnabled = !isSoundEnabled;
+      const soundBtn = document.getElementById('sound-toggle');
+      if (isSoundEnabled) {
+        soundBtn.innerHTML = '<i class="fa-solid fa-volume-high text-emerald-600"></i>';
+      } else {
+        soundBtn.innerHTML = '<i class="fa-solid fa-volume-xmark text-rose-500"></i>';
+      }
+    }
+
+    // Web Audio API 自動合成響鈴提醒音效
+    function playAlarmSound() {
+      if (!isSoundEnabled) return;
+      try {
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        const now = audioCtx.currentTime;
+
+        // 發出三聲響亮的嗶嗶聲
+        [0, 0.25, 0.5, 0.75].forEach((delay) => {
+          const osc = audioCtx.createOscillator();
+          const gain = audioCtx.createGain();
+
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(880, now + delay); // A5 音調
+
+          gain.gain.setValueAtTime(0.3, now + delay);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + delay + 0.2);
+
+          osc.connect(gain);
+          gain.connect(audioCtx.destination);
+
+          osc.start(now + delay);
+          osc.stop(now + delay + 0.2);
+        });
+      } catch (e) {
+        console.log('Audio playback constrained or failed:', e);
+      }
+    }
+
+    /* ===================================================
+     * 3. 數位白板 (便利貼管理與 LocalStorage)
+     * =================================================== */
+    let notes = [
+      {
+        id: 1,
+        title: "📌 課堂注意事項",
+        content: "請大家將上週作業放置於桌面左上角，並準備好筆記本與講義。",
+        color: "yellow",
+        pinned: true
+      },
+      {
+        id: 2,
+        title: "📝 今日課堂任務",
+        content: "1. 完成第三章重點練習\n2. 小組進行 10 分鐘個案討論",
+        color: "sky",
+        pinned: false
+      }
+    ];
+
+    let currentEditingNoteId = null;
+
+    // 顏色樣式對照表 (明亮高對比色)
+    const colorStyles = {
+      yellow: {
+        bg: 'bg-yellow-200',
+        border: 'border-yellow-500',
+        headerBg: 'bg-yellow-300'
+      },
+      sky: {
+        bg: 'bg-sky-200',
+        border: 'border-sky-500',
+        headerBg: 'bg-sky-300'
+      },
+      emerald: {
+        bg: 'bg-emerald-200',
+        border: 'border-emerald-500',
+        headerBg: 'bg-emerald-300'
+      },
+      pink: {
+        bg: 'bg-pink-200',
+        border: 'border-pink-500',
+        headerBg: 'bg-pink-300'
+      },
+      purple: {
+        bg: 'bg-purple-200',
+        border: 'border-purple-500',
+        headerBg: 'bg-purple-300'
+      }
+    };
+
+    // 從 LocalStorage 載入資料
+    function loadNotesFromStorage() {
+      const saved = localStorage.getItem('classroom_notes');
+      if (saved) {
+        try {
+          notes = JSON.parse(saved);
+        } catch (e) {
+          console.error(e);
+        }
+      }
+      renderNotes();
+    }
+
+    function saveNotesToStorage() {
+      localStorage.setItem('classroom_notes', JSON.stringify(notes));
+    }
+
+    function renderNotes() {
+      const container = document.getElementById('notes-container');
+      container.innerHTML = '';
+
+      if (notes.length === 0) {
+        container.innerHTML = `
+          <div class="col-span-full flex flex-col items-center justify-center p-12 bg-white rounded-3xl border-4 border-dashed border-slate-300 text-slate-400">
+            <i class="fa-regular fa-clipboard text-6xl mb-3"></i>
+            <p class="text-2xl font-black">白板目前空空如也</p>
+            <p class="text-base font-bold mt-1">點擊上方「新增公告便利貼」開始發布內容！</p>
+          </div>
+        `;
+        return;
+      }
+
+      notes.forEach((note) => {
+        const style = colorStyles[note.color] || colorStyles.yellow;
+        
+        const noteEl = document.createElement('div');
+        noteEl.className = `sticky-note ${style.bg} border-3 ${style.border} rounded-2xl p-4 flex flex-col justify-between text-slate-900 border-3 border-black relative`;
+
+        // 換行轉成 <br>
+        const formattedContent = note.content.replace(/\n/g, '<br>');
+
+        noteEl.innerHTML = `
+          <div>
+            <!-- 便利貼頂欄 -->
+            <div class="flex justify-between items-center mb-3 border-b-2 border-black/20 pb-2">
+              <span class="font-black text-xl tracking-wide flex items-center gap-2">
+                ${note.title || '無標題公告'}
+              </span>
+              <div class="flex items-center gap-2">
+                <button onclick="deleteNote(${note.id})" class="text-slate-700 hover:text-rose-700 text-lg p-1" title="刪除">
+                  <i class="fa-solid fa-trash-can"></i>
+                </button>
+              </div>
+            </div>
+            
+            <!-- 便利貼本文內容 (字體約 20px - 22px) -->
+            <div class="text-xl font-bold leading-relaxed whitespace-pre-wrap text-slate-900 my-2">
+              ${formattedContent}
+            </div>
+          </div>
+
+          <!-- 便利貼腳位 -->
+          <div class="mt-4 pt-2 border-t border-black/10 flex justify-between items-center text-xs text-slate-700 font-extrabold">
+            <span>智慧公告貼</span>
+            <button onclick="editNote(${note.id})" class="text-blue-900 hover:underline text-sm font-black flex items-center gap-1">
+              <i class="fa-solid fa-pen"></i> 編輯
+            </button>
+          </div>
+        `;
+
+        container.appendChild(noteEl);
+      });
+    }
+
+    function openNoteModal(isEdit = false) {
+      document.getElementById('note-modal').classList.remove('hidden');
+      document.getElementById('note-modal').classList.add('flex');
+      if (!isEdit) {
+        currentEditingNoteId = null;
+        document.getElementById('modal-title').innerText = '新增公告便利貼';
+        document.getElementById('note-title-input').value = '';
+        document.getElementById('note-content-input').value = '';
+      }
+    }
+
+    function closeNoteModal() {
+      document.getElementById('note-modal').classList.add('hidden');
+      document.getElementById('note-modal').classList.remove('flex');
+    }
+
+    function saveNote() {
+      const title = document.getElementById('note-title-input').value.trim();
+      const content = document.getElementById('note-content-input').value.trim();
+      const colorInput = document.querySelector('input[name="note-color"]:checked');
+      const color = colorInput ? colorInput.value : 'yellow';
+
+      if (!content) {
+        alert('請輸入公告內容喔！');
+        return;
+      }
+
+      if (currentEditingNoteId) {
+        // 編輯模式
+        const note = notes.find(n => n.id === currentEditingNoteId);
+        if (note) {
+          note.title = title;
+          note.content = content;
+          note.color = color;
+        }
+      } else {
+        // 新增模式
+        const newNote = {
+          id: Date.now(),
+          title: title || '課堂公告',
+          content: content,
+          color: color,
+          pinned: false
+        };
+        notes.unshift(newNote);
+      }
+
+      saveNotesToStorage();
+      renderNotes();
+      closeNoteModal();
+    }
+
+    function editNote(id) {
+      const note = notes.find(n => n.id === id);
+      if (!note) return;
+
+      currentEditingNoteId = id;
+      document.getElementById('modal-title').innerText = '編輯公告便利貼';
+      document.getElementById('note-title-input').value = note.title;
+      document.getElementById('note-content-input').value = note.content;
+
+      // 選擇對應顏色 Radio
+      const radio = document.querySelector(`input[name="note-color"][value="${note.color}"]`);
+      if (radio) radio.checked = true;
+
+      openNoteModal(true);
+    }
+
+    function deleteNote(id) {
+      notes = notes.filter(n => n.id !== id);
+      saveNotesToStorage();
+      renderNotes();
+    }
+
+    function clearAllNotes() {
+      if (confirm('確定要清空白板上的所有便利貼嗎？')) {
+        notes = [];
+        saveNotesToStorage();
+        renderNotes();
+      }
+    }
+
+    /* ===================================================
+     * 4. 隨機抽號小工具
+     * =================================================== */
+    function drawRandomStudent() {
+      const maxNum = parseInt(document.getElementById('max-student-num').value) || 35;
+      const resultBox = document.getElementById('random-result');
+      
+      let count = 0;
+      const interval = setInterval(() => {
+        const rand = Math.floor(Math.random() * maxNum) + 1;
+        resultBox.innerText = `🎲 ${rand} 號`;
+        count++;
+        if (count > 12) {
+          clearInterval(interval);
+          const finalRand = Math.floor(Math.random() * maxNum) + 1;
+          resultBox.innerText = `🎉 恭喜 ${finalRand} 號！`;
+        }
+      }, 80);
+    }
+
+    /* ===================================================
+     * 5. 全螢幕切換工具
+     * =================================================== */
+    function toggleFullScreen() {
+      if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen().catch(err => {
+          console.log(`Error attempting to enable full-screen mode: ${err.message}`);
+        });
+      } else {
+        if (document.exitFullscreen) {
+          document.exitFullscreen();
+        }
+      }
+    }
+
+    // 初始化頁面
+    window.onload = function() {
+      renderTimer();
+      loadNotesFromStorage();
+    };
+  </script>
+</body>
+</html>
